@@ -1,5 +1,7 @@
 package com.eap15.reservehub.controller;
 
+import com.eap15.reservehub.dto.LoginRequestDTO;
+import com.eap15.reservehub.dto.LoginResponseDTO;
 import com.eap15.reservehub.dto.UserDTO;
 import com.eap15.reservehub.dto.ProviderRegisterDTO;
 import com.eap15.reservehub.entity.User;
@@ -33,6 +35,14 @@ public class UserController {
     public ResponseEntity<UserDTO> registerProveedor(
             @Valid @RequestBody ProviderRegisterDTO dto) {
         return ResponseEntity.ok(userService.registerProveedor(dto));
+    }
+
+    // HU-02: Inicio de sesion
+    // POST /api/users/login
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponseDTO> login(
+            @Valid @RequestBody LoginRequestDTO loginRequest) {
+        return ResponseEntity.ok(userService.login(loginRequest));
     }
 
     // HU-05: Obtener todos los usuarios (dashboard administrador)

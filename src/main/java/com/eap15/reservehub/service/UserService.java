@@ -2,6 +2,8 @@ package com.eap15.reservehub.service;
 
 import com.eap15.reservehub.dto.ProviderRegisterDTO;
 import com.eap15.reservehub.dto.UserDTO;
+import com.eap15.reservehub.dto.LoginResponseDTO;
+import com.eap15.reservehub.dto.LoginRequestDTO;
 import com.eap15.reservehub.entity.ProviderCode;
 import com.eap15.reservehub.entity.User;
 import com.eap15.reservehub.mapper.UserMapper;
@@ -74,6 +76,41 @@ public class UserService {
         providerCodeRepository.save(providerCode);
 
         return userMapper.toDTO(userRepository.save(user));
+    }
+
+    // HU-02: Inicio de sesion
+    public LoginResponseDTO login(LoginRequestDTO loginRequest) {
+
+        // Escenario 3: Correo no registrado
+        // Usamos el mismo mensaje que contraseña incorrecta por seguridad
+        // (no revelamos si el correo existe o no - HU-02)
+        User user = userRepository.findByEmail(loginRequest.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Correo o contrasena incorrectos"));
+
+        // Escenario 2: Contrasena incorrecta
+        // En produccion esto seria: BCrypt.matches(loginRequest.getPassword(), user.getPassword())
+        // Por ahora comparamos directo porque no tenemos hashing aun
+        if (!user.getPassword().equals(loginRequest.getPassword())) {
+            throw new IllegalArgumentException("Correo o contrasena incorrectos");
+        }
+
+        // Escenario 4: Cuenta inactiva o bloqueada (HU-02)
+        if (!user.isActive()) {
+            throw new IllegalArgumentException(
+                    "Esta cuenta esta inactiva. Contacte al administrador");
+        }
+
+        // Escenario 1: Login exitoso - devolvemos datos del usuario y su rol
+        // El frontend usa el rol para redirigir al dashboard correcto (HU-02 / HU-05)
+        return new LoginResponseDTO(
+                user.getId(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getEmail(),
+                user.getRole(),
+                "Inicio de sesion exitoso"
+        );
     }
 
     // HU-03: Obtener todos los usuarios
