@@ -1,0 +1,71 @@
+#Workflow name
+name: CI/CD Pipeline
+on:
+  #Manually trigger workflow runs
+  workflow_dispatch:
+  #Trigger the workflow on push from the main branch
+  push:
+    branches:
+      - main
+
+  #Build's job
+  build:
+    #Depends on sonar's job
+    needs: sonar
+    name: Build
+    #Run on Ubuntu using the latest version
+    runs-on: ubuntu-latest
+    steps:
+      #Check-out your repository under $GITHUB_WORKSPACE, so your workflow can access it
+      - uses: actions/checkout@v1
+
+      - name: Set up JDK
+        uses: actions/setup-java@v1
+        with:
+          java-version: '17'
+      #Set up Maven cache
+      - name: Cache Maven packages
+        #This action allows caching dependencies and build outputs to improve workflow execution time.
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+      #Build the application using Maven
+      - name: Build with Maven
+        run: mvn -B package -DskipTests --file pom.xml
+      #Build the application using Maven
+      - name: Upload JAR
+        #This uploads artifacts from your workflow allowing you to share data between jobs and store data once a workflow is complete.
+        uses: actions/upload-artifact@v4
+        with:
+          #Set artifact name
+          name: artifact
+          #From this path
+          path: target/reservehub.jar
+
+      - name: Build & push Docker image
+        uses: mr-smithers-excellent/docker-build-push@v6
+        with:
+          image: juanmauwu/reservehub
+          tags: latest
+          registry: docker.io
+          dockerfile: Dockerfile
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # ============================================================
+      #  DEPLOY EN RENDER
+      #  Render expone un Deploy Hook (URL). Al hacer POST a esa URL,
+      #  Render sabe que hay una nueva imagen en Docker Hub y
+      #  reemplaza el contenedor en ejecucion con la nueva version.
+      #
+      #  Como crear el secret RENDER_DEPLOY_HOOK:
+      #  render.com -> tu servicio -> Settings -> Deploy Hook -> copiar URL
+      #  GitHub repo -> Settings -> Secrets -> Actions -> New secret
+      #  Nombre: RENDER_DEPLOY_HOOK  |  Valor: (la URL copiada)
+      # ============================================================
+      - name: Deploy to Render
+        run: |
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+          echo "Deploy triggered on Render"

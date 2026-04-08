@@ -45,8 +45,8 @@
 		</dependency>
 
 		<dependency>
-			<groupId>com.mysql</groupId>
-			<artifactId>mysql-connector-j</artifactId>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
 			<scope>runtime</scope>
 		</dependency>
 
@@ -129,6 +129,7 @@
 				</configuration>
 			</plugin>
 		</plugins>
+		<finalName>lab2-2026</finalName>
 	</build>
 
 </project>
