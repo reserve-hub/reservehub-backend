@@ -129,7 +129,7 @@
 				</configuration>
 			</plugin>
 		</plugins>
-		<finalName>lab2-2026</finalName>
+		<finalName>reservehub</finalName>
 	</build>
 
 </project>
