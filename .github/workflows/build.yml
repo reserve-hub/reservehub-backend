@@ -8,6 +8,7 @@ on:
     branches:
       - main
 
+jobs:
   #Build's job
   build:
     #Depends on sonar's job
