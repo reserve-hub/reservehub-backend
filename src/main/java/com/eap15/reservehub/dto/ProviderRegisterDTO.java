@@ -36,6 +36,8 @@ public class ProviderRegisterDTO {
     @NotBlank(message = "El tipo de servicio es obligatorio")
     private String serviceType;
 
+    private String serviceDescription;
+
     public ProviderRegisterDTO() {}
 
     public String getFirstName() { return firstName; }
@@ -58,4 +60,7 @@ public class ProviderRegisterDTO {
 
     public String getServiceType() { return serviceType; }
     public void setServiceType(String serviceType) { this.serviceType = serviceType; }
+
+    public String getServiceDescription() { return serviceDescription; }
+    public void setServiceDescription(String serviceDescription) { this.serviceDescription = serviceDescription; }
 }

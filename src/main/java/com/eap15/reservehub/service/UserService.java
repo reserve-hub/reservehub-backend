@@ -9,7 +9,12 @@ import com.eap15.reservehub.entity.User;
 import com.eap15.reservehub.mapper.UserMapper;
 import com.eap15.reservehub.repository.ProviderCodeRepository;
 import com.eap15.reservehub.repository.UserRepository;
+import com.eap15.reservehub.security.JwtProvider;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -26,6 +31,15 @@ public class UserService {
     @Autowired
     private ProviderCodeRepository providerCodeRepository;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private AuthenticationManager authenticationManager;
+
+    @Autowired
+    private JwtProvider jwtProvider;
+
     // HU-01 Escenario 1: Registro de CLIENTE
     public UserDTO registerCliente(UserDTO userDTO) {
         // Validar correo duplicado (HU-01 escenario de error)
@@ -36,7 +50,7 @@ public class UserService {
         User user = userMapper.toEntity(userDTO);
         user.setRole(User.Role.CLIENTE);
         user.setActive(true);
-        user.setPassword(userDTO.getPassword()); // En prod: BCrypt
+        user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
 
         return userMapper.toDTO(userRepository.save(user));
     }
@@ -65,9 +79,10 @@ public class UserService {
         user.setFirstName(dto.getFirstName());
         user.setLastName(dto.getLastName());
         user.setEmail(dto.getEmail());
-        user.setPassword(dto.getPassword()); // En prod: BCrypt
+        user.setPassword(passwordEncoder.encode(dto.getPassword()));
         user.setPhone(dto.getPhone());
         user.setServiceType(dto.getServiceType());
+        user.setServiceDescription(dto.getServiceDescription());
         user.setRole(User.Role.PROVEEDOR);
         user.setActive(true);
 
@@ -80,37 +95,40 @@ public class UserService {
 
     // HU-02: Inicio de sesion
     public LoginResponseDTO login(LoginRequestDTO loginRequest) {
+        // En lugar de comparar a mano, delegamos en Spring Security (que usa BCrypt internamente si lo configuramos)
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
+            );
 
-        // Escenario 3: Correo no registrado
-        // Usamos el mismo mensaje que contraseña incorrecta por seguridad
-        // (no revelamos si el correo existe o no - HU-02)
-        User user = userRepository.findByEmail(loginRequest.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Correo o contrasena incorrectos"));
+            // Escenario 3: Generamos el JWT si todo fue OK (validó contra BCrypt)
+            String jwtToken = jwtProvider.generateToken(authentication);
 
-        // Escenario 2: Contrasena incorrecta
-        // En produccion esto seria: BCrypt.matches(loginRequest.getPassword(), user.getPassword())
-        // Por ahora comparamos directo porque no tenemos hashing aun
-        if (!user.getPassword().equals(loginRequest.getPassword())) {
+            User user = userRepository.findByEmail(loginRequest.getEmail())
+                    .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado post-auth"));
+
+            // Escenario 4: Cuenta inactiva o bloqueada (HU-02)
+            if (!user.isActive()) {
+                throw new IllegalArgumentException("Esta cuenta esta inactiva. Contacte al administrador");
+            }
+
+            // Escenario 1: Login exitoso
+            return new LoginResponseDTO(
+                    user.getId(),
+                    user.getFirstName(),
+                    user.getLastName(),
+                    user.getEmail(),
+                    user.getRole(),
+                    "Inicio de sesion exitoso",
+                    jwtToken
+            );
+
+        } catch (org.springframework.security.authentication.BadCredentialsException e) {
+            // El usuario o la contraseña falló
             throw new IllegalArgumentException("Correo o contrasena incorrectos");
+        } catch (org.springframework.security.authentication.DisabledException e) {
+            throw new IllegalArgumentException("Esta cuenta esta inactiva. Contacte al administrador");
         }
-
-        // Escenario 4: Cuenta inactiva o bloqueada (HU-02)
-        if (!user.isActive()) {
-            throw new IllegalArgumentException(
-                    "Esta cuenta esta inactiva. Contacte al administrador");
-        }
-
-        // Escenario 1: Login exitoso - devolvemos datos del usuario y su rol
-        // El frontend usa el rol para redirigir al dashboard correcto (HU-02 / HU-05)
-        return new LoginResponseDTO(
-                user.getId(),
-                user.getFirstName(),
-                user.getLastName(),
-                user.getEmail(),
-                user.getRole(),
-                "Inicio de sesion exitoso"
-        );
     }
 
     // HU-03: Obtener todos los usuarios

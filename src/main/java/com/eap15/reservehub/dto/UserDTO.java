@@ -36,6 +36,9 @@ public class UserDTO {
 
     private String phone;
 
+    private String serviceType;
+    private String serviceDescription;
+
     // El rol no lo manda el usuario al registrarse, lo asigna el sistema
     // Por eso no tiene @NotNull aquí
     private User.Role role;
@@ -62,6 +65,12 @@ public class UserDTO {
 
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
+
+    public String getServiceType() { return serviceType; }
+    public void setServiceType(String serviceType) { this.serviceType = serviceType; }
+
+    public String getServiceDescription() { return serviceDescription; }
+    public void setServiceDescription(String serviceDescription) { this.serviceDescription = serviceDescription; }
 
     public User.Role getRole() { return role; }
     public void setRole(User.Role role) { this.role = role; }

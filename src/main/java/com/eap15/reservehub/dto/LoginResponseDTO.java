@@ -10,18 +10,20 @@ public class LoginResponseDTO {
     private String email;
     private User.Role role;
     private String message;
+    private String token;
 
     public LoginResponseDTO() {}
 
     // Constructor completo para construirlo facilmente en el service
     public LoginResponseDTO(Long id, String firstName, String lastName,
-                            String email, User.Role role, String message) {
+                            String email, User.Role role, String message, String token) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
         this.role = role;
         this.message = message;
+        this.token = token;
     }
 
     public Long getId() { return id; }
@@ -41,4 +43,7 @@ public class LoginResponseDTO {
 
     public String getMessage() { return message; }
     public void setMessage(String message) { this.message = message; }
+
+    public String getToken() { return token; }
+    public void setToken(String token) { this.token = token; }
 }
