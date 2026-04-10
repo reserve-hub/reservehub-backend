@@ -50,8 +50,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
-
-        Bucket bucket = buckets.computeIfAbsent(userId, key -> createNewBucket(role));
+        // Para usar en la función lambda, la variable debe ser effectively final
+        final String currentRole = role;
+        Bucket bucket = buckets.computeIfAbsent(userId, key -> createNewBucket(currentRole));
 
         if (bucket.tryConsume(1)) {
             filterChain.doFilter(request, response);
