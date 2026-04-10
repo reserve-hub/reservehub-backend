@@ -36,6 +36,10 @@ public class User {
     @Column(length = 100)
     private String serviceType;
 
+    // Descripcion del servicio, solo para PROVEEDORES, requiere null para clientes
+    @Column(columnDefinition = "TEXT")
+    private String serviceDescription;
+
     // Enum almacenado como String en BD (más legible que número)
     // Valores posibles: CLIENTE, PROVEEDOR, ADMINISTRADOR
     @Enumerated(EnumType.STRING)

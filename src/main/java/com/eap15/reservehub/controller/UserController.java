@@ -9,9 +9,11 @@ import com.eap15.reservehub.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping(value = "/api/users", produces = "application/json")
@@ -46,18 +48,21 @@ public class UserController {
     }
 
     // HU-05: Obtener todos los usuarios (dashboard administrador)
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @GetMapping
     public ResponseEntity<List<UserDTO>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
     }
 
-    // HU-03: Ver perfil por ID
+    // HU-03: Ver perfil por ID (Solo acceso propio o Admin)
+    @PreAuthorize("#id == authentication.principal.user.id or hasRole('ADMINISTRADOR')")
     @GetMapping("/{id}")
     public ResponseEntity<UserDTO> getUserById(@PathVariable Long id) {
         return ResponseEntity.ok(userService.getUserById(id));
     }
 
-    // HU-03: Editar perfil
+    // HU-03: Editar perfil (Solo dueño de la cuenta)
+    @PreAuthorize("#id == authentication.principal.user.id")
     @PutMapping("/{id}")
     public ResponseEntity<UserDTO> updateUser(
             @PathVariable Long id,
@@ -65,9 +70,29 @@ public class UserController {
         return ResponseEntity.ok(userService.updateUser(id, userDTO));
     }
 
-    // HU-04: Activar/desactivar cuenta
+    // HU-04: Activar/desactivar cuenta (Solo administrador)
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
     @PatchMapping("/{id}/status")
     public ResponseEntity<UserDTO> toggleStatus(@PathVariable Long id) {
         return ResponseEntity.ok(userService.toggleUserStatus(id));
+    }
+
+    // HU-05: Dashboard específico por rol - Endpoints simulados
+    @PreAuthorize("hasRole('CLIENTE')")
+    @GetMapping("/dashboard/cliente")
+    public ResponseEntity<Map<String, String>> getClienteDashboard() {
+        return ResponseEntity.ok(Map.of("message", "Bienvenido al Dashboard de Cliente", "reservas", "[]"));
+    }
+
+    @PreAuthorize("hasRole('PROVEEDOR')")
+    @GetMapping("/dashboard/proveedor")
+    public ResponseEntity<Map<String, String>> getProveedorDashboard() {
+        return ResponseEntity.ok(Map.of("message", "Bienvenido al Dashboard de Proveedor", "agenda", "[]"));
+    }
+
+    @PreAuthorize("hasRole('ADMINISTRADOR')")
+    @GetMapping("/dashboard/admin")
+    public ResponseEntity<Map<String, String>> getAdminDashboard() {
+        return ResponseEntity.ok(Map.of("message", "Bienvenido al Panel de Control de Administración", "stats", "{}"));
     }
 }
