@@ -16,15 +16,19 @@ public class ProviderCode {
     private String code;
 
     // false = disponible para usar / true = ya fue utilizado
-    // Un codigo solo puede usarse UNA vez (HU-01: "no haya sido utilizado")
     @Column(nullable = false)
     private boolean used = false;
+
+    // true = activo (puede usarse) / false = desactivado por admin (HU-09)
+    @Column(nullable = false)
+    private boolean active = true;
 
     public ProviderCode() {}
 
     public ProviderCode(String code) {
         this.code = code;
         this.used = false;
+        this.active = true;
     }
 
     public Long getId() { return id; }
@@ -35,4 +39,7 @@ public class ProviderCode {
 
     public boolean isUsed() { return used; }
     public void setUsed(boolean used) { this.used = used; }
+
+    public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
 }

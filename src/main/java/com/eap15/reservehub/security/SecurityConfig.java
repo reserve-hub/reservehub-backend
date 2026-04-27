@@ -44,8 +44,8 @@ public class SecurityConfig {
             // Configuración de Endpoints
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/users/login", "/api/users/register/**").permitAll()
+                .requestMatchers("/api/schedules/available").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                // Cualquier otra ruta requiere autenticación
                 .anyRequest().authenticated()
             );
 

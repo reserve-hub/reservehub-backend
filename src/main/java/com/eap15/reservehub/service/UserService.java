@@ -69,8 +69,8 @@ public class UserService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Codigo de proveedor invalido o expirado"));
 
-        // Verificar que el codigo no haya sido usado ya (HU-01)
-        if (providerCode.isUsed()) {
+        // Verificar que el codigo no haya sido usado ya ni esté desactivado (HU-01 / HU-09)
+        if (providerCode.isUsed() || !providerCode.isActive()) {
             throw new IllegalArgumentException("Codigo de proveedor invalido o expirado");
         }
 
