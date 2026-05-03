@@ -1,5 +1,6 @@
 package com.eap15.reservehub.security;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -47,6 +48,13 @@ public class SecurityConfig {
                 .requestMatchers("/api/schedules/available").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .anyRequest().authenticated()
+            )
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"error\":\"No autenticado. Se requiere token JWT.\"}");
+                })
             );
 
         // Agregamos nuestro filtro de JWT antes del filtro convencional de Username/Password de Spring

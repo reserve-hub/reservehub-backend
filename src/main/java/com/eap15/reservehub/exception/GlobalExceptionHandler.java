@@ -3,6 +3,7 @@ package com.eap15.reservehub.exception;
 import io.swagger.v3.oas.annotations.Hidden;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -24,6 +25,12 @@ public class GlobalExceptionHandler {
         ex.getBindingResult().getFieldErrors().forEach(error ->
                 errors.put(error.getField(), error.getDefaultMessage()));
         return ResponseEntity.badRequest().body(errors);
+    }
+
+    // Deja que Spring Security maneje AccessDeniedException (retorna 403)
+    @ExceptionHandler(AccessDeniedException.class)
+    public void rethrowAccessDenied(AccessDeniedException ex) throws AccessDeniedException {
+        throw ex;
     }
 
     // Captura errores de negocio lanzados con RuntimeException

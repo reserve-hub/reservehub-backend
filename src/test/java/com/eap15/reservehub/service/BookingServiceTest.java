@@ -16,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
@@ -127,6 +128,24 @@ class BookingServiceTest {
         assertThatThrownBy(() -> bookingService.createBooking(1L, requestDTO))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("no existe");
+    }
+
+    // getMyBookings: retorna reservas del cliente
+    @Test
+    void getMyBookings_returnsClientBookings() {
+        Booking booking = new Booking();
+        booking.setId(200L);
+        booking.setClient(client);
+        booking.setSchedule(schedule);
+        booking.setStatus(Booking.BookingStatus.CONFIRMED);
+        booking.setCreatedAt(LocalDateTime.now());
+
+        when(bookingRepository.findByClientId(1L)).thenReturn(List.of(booking));
+
+        List<BookingResponseDTO> result = bookingService.getMyBookings(1L);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getStatus()).isEqualTo(Booking.BookingStatus.CONFIRMED);
     }
 
     // HU-08 Escenario 5: Cupo se decrementa correctamente

@@ -13,6 +13,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -145,5 +146,65 @@ class ScheduleServiceTest {
         assertThatThrownBy(() -> scheduleService.toggleScheduleStatus(10L, 1L))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("permiso");
+    }
+
+    // HU-06: Franja no encontrada al hacer toggle
+    @Test
+    void toggleScheduleStatus_notFound_throws() {
+        when(scheduleRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> scheduleService.toggleScheduleStatus(999L, 1L))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Franja horaria no encontrada");
+    }
+
+    // HU-07: getAvailableSchedules con filtros opcionales
+    @Test
+    void getAvailableSchedules_noFilters_returnsAll() {
+        Schedule s = new Schedule();
+        s.setId(1L);
+        s.setProvider(provider);
+        s.setStartTime(requestDTO.getStartTime());
+        s.setEndTime(requestDTO.getEndTime());
+        s.setAvailableSlots(3);
+        s.setActive(true);
+        s.setCreatedAt(LocalDateTime.now());
+
+        when(scheduleRepository.findAvailable(null, null, null)).thenReturn(List.of(s));
+
+        List<ScheduleResponseDTO> result = scheduleService.getAvailableSchedules(null, null, null);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getAvailableSlots()).isEqualTo(3);
+    }
+
+    // HU-06: getMySchedules del proveedor autenticado
+    @Test
+    void getMySchedules_returnsProviderSchedules() {
+        Schedule s = new Schedule();
+        s.setId(2L);
+        s.setProvider(provider);
+        s.setStartTime(requestDTO.getStartTime());
+        s.setEndTime(requestDTO.getEndTime());
+        s.setAvailableSlots(5);
+        s.setActive(true);
+        s.setCreatedAt(LocalDateTime.now());
+
+        when(scheduleRepository.findByProviderIdAndActiveTrue(1L)).thenReturn(List.of(s));
+
+        List<ScheduleResponseDTO> result = scheduleService.getMySchedules(1L);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getProviderId()).isEqualTo(1L);
+    }
+
+    // HU-06: proveedor no encontrado lanza excepción
+    @Test
+    void createSchedule_providerNotFound_throws() {
+        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> scheduleService.createSchedule(1L, requestDTO))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Proveedor no encontrado");
     }
 }
