@@ -40,7 +40,7 @@ jobs:
         run: mvn -B verify --file pom.xml
 
       - name: SonarCloud Analysis
-        uses: SonarSource/sonarcloud-github-action@v3
+        uses: SonarSource/sonarcloud-github-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
