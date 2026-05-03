@@ -4,7 +4,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,11 +19,15 @@ import java.io.IOException;
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private JwtProvider jwtProvider;
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthFilter.class);
 
-    @Autowired
-    private UserDetailsServiceImpl userDetailsService;
+    private final JwtProvider jwtProvider;
+    private final UserDetailsServiceImpl userDetailsService;
+
+    public JwtAuthFilter(JwtProvider jwtProvider, UserDetailsServiceImpl userDetailsService) {
+        this.jwtProvider = jwtProvider;
+        this.userDetailsService = userDetailsService;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -42,8 +47,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception ex) {
-            // Error en la autenticación, continua la cadena y será bloqueado luego por Spring Security
-            logger.error("No se pudo establecer la autenticación con JWT: " + ex.getMessage());
+            log.error("No se pudo establecer la autenticación con JWT: {}", ex.getMessage());
         }
 
         filterChain.doFilter(request, response);

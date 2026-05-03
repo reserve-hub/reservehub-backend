@@ -6,7 +6,6 @@ import com.eap15.reservehub.entity.Schedule;
 import com.eap15.reservehub.entity.User;
 import com.eap15.reservehub.repository.ScheduleRepository;
 import com.eap15.reservehub.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,11 +15,13 @@ import java.util.List;
 @Service
 public class ScheduleService {
 
-    @Autowired
-    private ScheduleRepository scheduleRepository;
+    private final ScheduleRepository scheduleRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private UserRepository userRepository;
+    public ScheduleService(ScheduleRepository scheduleRepository, UserRepository userRepository) {
+        this.scheduleRepository = scheduleRepository;
+        this.userRepository = userRepository;
+    }
 
     // HU-06 Escenario 1: Registro exitoso de una franja
     @Transactional

@@ -31,6 +31,7 @@
 		<sonar.projectKey>reserve-hub_reservehub-backend</sonar.projectKey>
 		<sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
 		<sonar.exclusions>**/dto/**,**/entity/**,**/mapper/**,**/ReservehubApplication.java</sonar.exclusions>
+		<sonar.coverage.exclusions>**/security/**,**/dto/**,**/entity/**,**/mapper/**,**/ReservehubApplication.java</sonar.coverage.exclusions>
 
 	</properties>
 

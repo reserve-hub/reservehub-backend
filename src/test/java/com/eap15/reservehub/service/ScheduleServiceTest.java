@@ -13,7 +13,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -206,5 +205,58 @@ class ScheduleServiceTest {
         assertThatThrownBy(() -> scheduleService.createSchedule(1L, requestDTO))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("Proveedor no encontrado");
+    }
+
+    // Hora de inicio nula
+    @Test
+    void createSchedule_nullStartTime_throws() {
+        requestDTO.setStartTime(null);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(provider));
+
+        assertThatThrownBy(() -> scheduleService.createSchedule(1L, requestDTO))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("rango horario no es válido");
+    }
+
+    // Hora de fin nula
+    @Test
+    void createSchedule_nullEndTime_throws() {
+        requestDTO.setEndTime(null);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(provider));
+
+        assertThatThrownBy(() -> scheduleService.createSchedule(1L, requestDTO))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("rango horario no es válido");
+    }
+
+    // Hora inicio igual a hora fin (no es after)
+    @Test
+    void createSchedule_equalTimes_throws() {
+        requestDTO.setEndTime(requestDTO.getStartTime());
+        when(userRepository.findById(1L)).thenReturn(Optional.of(provider));
+
+        assertThatThrownBy(() -> scheduleService.createSchedule(1L, requestDTO))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("rango horario no es válido");
+    }
+
+    // HU-06 Escenario 5: Toggle a franja ya inactiva la reactiva
+    @Test
+    void toggleScheduleStatus_inactiveSchedule_activates() {
+        Schedule schedule = new Schedule();
+        schedule.setId(10L);
+        schedule.setProvider(provider);
+        schedule.setActive(false);
+        schedule.setStartTime(requestDTO.getStartTime());
+        schedule.setEndTime(requestDTO.getEndTime());
+        schedule.setAvailableSlots(5);
+        schedule.setCreatedAt(java.time.LocalDateTime.now());
+
+        when(scheduleRepository.findById(10L)).thenReturn(Optional.of(schedule));
+        when(scheduleRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        ScheduleResponseDTO result = scheduleService.toggleScheduleStatus(10L, 1L);
+
+        assertThat(result.isActive()).isTrue();
     }
 }

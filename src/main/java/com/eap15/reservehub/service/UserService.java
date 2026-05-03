@@ -1,17 +1,18 @@
 package com.eap15.reservehub.service;
 
+import com.eap15.reservehub.dto.LoginRequestDTO;
+import com.eap15.reservehub.dto.LoginResponseDTO;
 import com.eap15.reservehub.dto.ProviderRegisterDTO;
 import com.eap15.reservehub.dto.UserDTO;
-import com.eap15.reservehub.dto.LoginResponseDTO;
-import com.eap15.reservehub.dto.LoginRequestDTO;
 import com.eap15.reservehub.entity.ProviderCode;
 import com.eap15.reservehub.entity.User;
 import com.eap15.reservehub.mapper.UserMapper;
 import com.eap15.reservehub.repository.ProviderCodeRepository;
 import com.eap15.reservehub.repository.UserRepository;
 import com.eap15.reservehub.security.JwtProvider;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AccountStatusException;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,27 +23,29 @@ import java.util.List;
 @Service
 public class UserService {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+    private final UserMapper userMapper;
+    private final ProviderCodeRepository providerCodeRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
+    private final JwtProvider jwtProvider;
 
-    @Autowired
-    private UserMapper userMapper;
-
-    @Autowired
-    private ProviderCodeRepository providerCodeRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private AuthenticationManager authenticationManager;
-
-    @Autowired
-    private JwtProvider jwtProvider;
+    public UserService(UserRepository userRepository,
+                       UserMapper userMapper,
+                       ProviderCodeRepository providerCodeRepository,
+                       PasswordEncoder passwordEncoder,
+                       AuthenticationManager authenticationManager,
+                       JwtProvider jwtProvider) {
+        this.userRepository = userRepository;
+        this.userMapper = userMapper;
+        this.providerCodeRepository = providerCodeRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.authenticationManager = authenticationManager;
+        this.jwtProvider = jwtProvider;
+    }
 
     // HU-01 Escenario 1: Registro de CLIENTE
     public UserDTO registerCliente(UserDTO userDTO) {
-        // Validar correo duplicado (HU-01 escenario de error)
         if (userRepository.existsByEmail(userDTO.getEmail())) {
             throw new IllegalArgumentException("Este correo ya esta registrado");
         }
@@ -57,24 +60,19 @@ public class UserService {
 
     // HU-01 Escenario 2: Registro de PROVEEDOR con validacion de codigo
     public UserDTO registerProveedor(ProviderRegisterDTO dto) {
-        // Validar correo duplicado
         if (userRepository.existsByEmail(dto.getEmail())) {
             throw new IllegalArgumentException("Este correo ya esta registrado");
         }
 
-        // Buscar el codigo en la tabla provider_codes
-        // Si no existe -> invalido. Si existe pero ya fue usado -> invalido
         ProviderCode providerCode = providerCodeRepository
                 .findByCode(dto.getProviderCode())
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Codigo de proveedor invalido o expirado"));
 
-        // Verificar que el codigo no haya sido usado ya ni esté desactivado (HU-01 / HU-09)
         if (providerCode.isUsed() || !providerCode.isActive()) {
             throw new IllegalArgumentException("Codigo de proveedor invalido o expirado");
         }
 
-        // Construir el usuario proveedor
         User user = new User();
         user.setFirstName(dto.getFirstName());
         user.setLastName(dto.getLastName());
@@ -86,7 +84,6 @@ public class UserService {
         user.setRole(User.Role.PROVEEDOR);
         user.setActive(true);
 
-        // Marcar el codigo como usado para que no pueda reutilizarse
         providerCode.setUsed(true);
         providerCodeRepository.save(providerCode);
 
@@ -95,24 +92,20 @@ public class UserService {
 
     // HU-02: Inicio de sesion
     public LoginResponseDTO login(LoginRequestDTO loginRequest) {
-        // En lugar de comparar a mano, delegamos en Spring Security (que usa BCrypt internamente si lo configuramos)
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword())
             );
 
-            // Escenario 3: Generamos el JWT si todo fue OK (validó contra BCrypt)
             String jwtToken = jwtProvider.generateToken(authentication);
 
             User user = userRepository.findByEmail(loginRequest.getEmail())
                     .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado post-auth"));
 
-            // Escenario 4: Cuenta inactiva o bloqueada (HU-02)
             if (!user.isActive()) {
                 throw new IllegalArgumentException("Esta cuenta esta inactiva. Contacte al administrador");
             }
 
-            // Escenario 1: Login exitoso
             return new LoginResponseDTO(
                     user.getId(),
                     user.getFirstName(),
@@ -123,10 +116,10 @@ public class UserService {
                     jwtToken
             );
 
-        } catch (org.springframework.security.authentication.BadCredentialsException e) {
-            // El usuario o la contraseña falló
+        } catch (BadCredentialsException e) {
             throw new IllegalArgumentException("Correo o contrasena incorrectos");
-        } catch (org.springframework.security.authentication.DisabledException e) {
+        } catch (AccountStatusException e) {
+            // Catches DisabledException, LockedException, AccountExpiredException, etc.
             throw new IllegalArgumentException("Esta cuenta esta inactiva. Contacte al administrador");
         }
     }

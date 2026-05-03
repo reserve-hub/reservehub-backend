@@ -12,42 +12,37 @@ import java.util.HashMap;
 import java.util.Map;
 
 @ControllerAdvice
-@Hidden // Oculta este handler en la documentación de Swagger
+@Hidden
 public class GlobalExceptionHandler {
 
-    // Captura errores de validación (@Valid en controllers)
-    // Ej: campo @NotBlank vacío, @Min violado, etc.
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidationExceptions(
             MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
-        // Recorre cada error de campo y lo pone en el mapa: {"campo": "mensaje"}
         ex.getBindingResult().getFieldErrors().forEach(error ->
                 errors.put(error.getField(), error.getDefaultMessage()));
         return ResponseEntity.badRequest().body(errors);
     }
 
-    // Deja que Spring Security maneje AccessDeniedException (retorna 403)
+    // Rethrow so Spring Security handles it with 403
     @ExceptionHandler(AccessDeniedException.class)
     public void rethrowAccessDenied(AccessDeniedException ex) throws AccessDeniedException {
         throw ex;
     }
 
-    // Captura errores de negocio lanzados con RuntimeException
-    // Ej: "Usuario no encontrado", "El correo ya está registrado"
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<Map<String, String>> handleRuntimeExceptions(RuntimeException ex) {
-        Map<String, String> error = new HashMap<>();
-        error.put("error", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
-    }
-
-    // Captura errores de argumento inválido lanzados con IllegalArgumentException
-    // Ej: validaciones de negocio como saldo insuficiente
+    // Business validation errors: duplicate email, invalid code, etc.
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, String>> handleIllegalArgument(IllegalArgumentException ex) {
         Map<String, String> error = new HashMap<>();
         error.put("error", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    // Resource not found errors thrown as RuntimeException in services
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<Map<String, String>> handleRuntimeExceptions(RuntimeException ex) {
+        Map<String, String> error = new HashMap<>();
+        error.put("error", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 }

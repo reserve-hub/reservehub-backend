@@ -15,8 +15,11 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -98,6 +101,48 @@ class BookingControllerIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
 
         return objectMapper.readTree(scheduleResponse).get("id").asText();
+    }
+
+    private String[] createProviderAndScheduleWithToken(int slots) throws Exception {
+        createAdmin();
+        String adminToken = loginAndGetToken("admin@test.com", "Admin1234!");
+
+        String codeResponse = mockMvc.perform(post("/api/provider-codes")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String code = objectMapper.readTree(codeResponse).get("code").asText();
+
+        mockMvc.perform(post("/api/users/register/proveedor")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "firstName": "María",
+                                  "lastName": "García",
+                                  "email": "proveedor@test.com",
+                                  "password": "Password1!",
+                                  "phone": "3109876543",
+                                  "serviceType": "Peluquería",
+                                  "providerCode": "%s"
+                                }""".formatted(code)))
+                .andExpect(status().isOk());
+
+        String proveedorToken = loginAndGetToken("proveedor@test.com", "Password1!");
+
+        String scheduleResponse = mockMvc.perform(post("/api/schedules")
+                        .header("Authorization", "Bearer " + proveedorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "startTime": "2026-06-15T09:00:00",
+                                  "endTime": "2026-06-15T10:00:00",
+                                  "availableSlots": %d
+                                }""".formatted(slots)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        String scheduleId = objectMapper.readTree(scheduleResponse).get("id").asText();
+        return new String[]{scheduleId, proveedorToken};
     }
 
     private String registerClientAndGetToken() throws Exception {
@@ -199,6 +244,8 @@ class BookingControllerIntegrationTest {
                 .andExpect(jsonPath("$[0].status").value("CONFIRMED"));
     }
 
+    // ── Casos de error ───────────────────────────────────────────────────────
+
     @Test
     void createBooking_nonExistentSchedule_returns400() throws Exception {
         String clientToken = registerClientAndGetToken();
@@ -208,5 +255,50 @@ class BookingControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"scheduleId\": 99999}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createBooking_inactiveSchedule_returns400() throws Exception {
+        String[] result = createProviderAndScheduleWithToken(5);
+        String scheduleId = result[0];
+        String proveedorToken = result[1];
+
+        // Deactivate the schedule
+        mockMvc.perform(patch("/api/schedules/" + scheduleId + "/status")
+                        .header("Authorization", "Bearer " + proveedorToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").value(false));
+
+        String clientToken = registerClientAndGetToken();
+
+        mockMvc.perform(post("/api/bookings")
+                        .header("Authorization", "Bearer " + clientToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"scheduleId\": " + scheduleId + "}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").exists());
+    }
+
+    @Test
+    void createBooking_noSlotsAvailable_returns400() throws Exception {
+        String[] result = createProviderAndScheduleWithToken(1);
+        String scheduleId = result[0];
+
+        String clientToken = registerClientAndGetToken();
+
+        // First booking succeeds (consumes the only slot)
+        mockMvc.perform(post("/api/bookings")
+                        .header("Authorization", "Bearer " + clientToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"scheduleId\": " + scheduleId + "}"))
+                .andExpect(status().isOk());
+
+        // Second booking fails: no slots left
+        mockMvc.perform(post("/api/bookings")
+                        .header("Authorization", "Bearer " + clientToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"scheduleId\": " + scheduleId + "}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").exists());
     }
 }

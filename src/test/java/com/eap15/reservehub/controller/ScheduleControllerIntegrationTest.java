@@ -15,8 +15,11 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -117,6 +120,27 @@ class ScheduleControllerIntegrationTest {
                 .andExpect(jsonPath("$").isArray());
     }
 
+    @Test
+    void getAvailableSchedules_withServiceTypeFilter_returns200() throws Exception {
+        mockMvc.perform(get("/api/schedules/available?serviceType=Peluquería"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
+    void getAvailableSchedules_withProviderIdFilter_returns200() throws Exception {
+        mockMvc.perform(get("/api/schedules/available?providerId=1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
+    void getAvailableSchedules_withAllFilters_returns200() throws Exception {
+        mockMvc.perform(get("/api/schedules/available?providerId=1&serviceType=Peluquería&date=2026-06-01"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
+
     // ── Protección por rol ───────────────────────────────────────────────────
 
     @Test
@@ -149,6 +173,14 @@ class ScheduleControllerIntegrationTest {
     }
 
     @Test
+    void getMySchedules_withoutToken_returns401() throws Exception {
+        mockMvc.perform(get("/api/schedules/mine"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // ── Creación de franja ───────────────────────────────────────────────────
+
+    @Test
     void createSchedule_asProveedor_validData_returns200() throws Exception {
         String proveedorToken = createProviderAndGetToken();
 
@@ -166,6 +198,52 @@ class ScheduleControllerIntegrationTest {
                 .andExpect(jsonPath("$.availableSlots").value(5))
                 .andExpect(jsonPath("$.active").value(true));
     }
+
+    @Test
+    void createSchedule_invalidRange_returns400() throws Exception {
+        String proveedorToken = createProviderAndGetToken();
+
+        mockMvc.perform(post("/api/schedules")
+                        .header("Authorization", "Bearer " + proveedorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "startTime": "2026-06-01T10:00:00",
+                                  "endTime": "2026-06-01T09:00:00",
+                                  "availableSlots": 5
+                                }"""))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createSchedule_overlapping_returns400() throws Exception {
+        String proveedorToken = createProviderAndGetToken();
+
+        mockMvc.perform(post("/api/schedules")
+                        .header("Authorization", "Bearer " + proveedorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "startTime": "2026-06-04T09:00:00",
+                                  "endTime": "2026-06-04T11:00:00",
+                                  "availableSlots": 5
+                                }"""))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/schedules")
+                        .header("Authorization", "Bearer " + proveedorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "startTime": "2026-06-04T10:00:00",
+                                  "endTime": "2026-06-04T12:00:00",
+                                  "availableSlots": 3
+                                }"""))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").exists());
+    }
+
+    // ── Listar mis franjas ───────────────────────────────────────────────────
 
     @Test
     void getMySchedules_asProveedor_returns200() throws Exception {
@@ -189,21 +267,7 @@ class ScheduleControllerIntegrationTest {
                 .andExpect(jsonPath("$[0].serviceType").value("Peluquería"));
     }
 
-    @Test
-    void createSchedule_invalidRange_returns400() throws Exception {
-        String proveedorToken = createProviderAndGetToken();
-
-        mockMvc.perform(post("/api/schedules")
-                        .header("Authorization", "Bearer " + proveedorToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "startTime": "2026-06-01T10:00:00",
-                                  "endTime": "2026-06-01T09:00:00",
-                                  "availableSlots": 5
-                                }"""))
-                .andExpect(status().isBadRequest());
-    }
+    // ── Toggle estado de franja ──────────────────────────────────────────────
 
     @Test
     void toggleScheduleStatus_asProveedor_returns200() throws Exception {
@@ -227,5 +291,21 @@ class ScheduleControllerIntegrationTest {
                         .header("Authorization", "Bearer " + proveedorToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(false));
+    }
+
+    @Test
+    void toggleScheduleStatus_notFound_returns404() throws Exception {
+        String proveedorToken = createProviderAndGetToken();
+
+        mockMvc.perform(patch("/api/schedules/99999/status")
+                        .header("Authorization", "Bearer " + proveedorToken))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").exists());
+    }
+
+    @Test
+    void toggleScheduleStatus_withoutToken_returns401() throws Exception {
+        mockMvc.perform(patch("/api/schedules/1/status"))
+                .andExpect(status().isUnauthorized());
     }
 }

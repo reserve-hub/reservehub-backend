@@ -3,7 +3,6 @@ package com.eap15.reservehub.service;
 import com.eap15.reservehub.dto.ProviderCodeResponseDTO;
 import com.eap15.reservehub.entity.ProviderCode;
 import com.eap15.reservehub.repository.ProviderCodeRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,8 +12,11 @@ import java.util.UUID;
 @Service
 public class ProviderCodeService {
 
-    @Autowired
-    private ProviderCodeRepository providerCodeRepository;
+    private final ProviderCodeRepository providerCodeRepository;
+
+    public ProviderCodeService(ProviderCodeRepository providerCodeRepository) {
+        this.providerCodeRepository = providerCodeRepository;
+    }
 
     // HU-09 Escenario 1: Generar nuevo código
     @Transactional

@@ -8,7 +8,6 @@ import com.eap15.reservehub.entity.User;
 import com.eap15.reservehub.repository.BookingRepository;
 import com.eap15.reservehub.repository.ScheduleRepository;
 import com.eap15.reservehub.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,14 +16,17 @@ import java.util.List;
 @Service
 public class BookingService {
 
-    @Autowired
-    private BookingRepository bookingRepository;
+    private final BookingRepository bookingRepository;
+    private final ScheduleRepository scheduleRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private ScheduleRepository scheduleRepository;
-
-    @Autowired
-    private UserRepository userRepository;
+    public BookingService(BookingRepository bookingRepository,
+                          ScheduleRepository scheduleRepository,
+                          UserRepository userRepository) {
+        this.bookingRepository = bookingRepository;
+        this.scheduleRepository = scheduleRepository;
+        this.userRepository = userRepository;
+    }
 
     // HU-08 Escenario 1: Creación exitosa de reserva
     @Transactional

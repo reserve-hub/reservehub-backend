@@ -168,4 +168,27 @@ class BookingServiceTest {
 
         assertThat(schedule.getAvailableSlots()).isEqualTo(0);
     }
+
+    // Cliente no encontrado en la BD
+    @Test
+    void createBooking_clientNotFound_throws() {
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+
+        BookingRequestDTO dto = new BookingRequestDTO();
+        dto.setScheduleId(5L);
+
+        assertThatThrownBy(() -> bookingService.createBooking(99L, dto))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Cliente no encontrado");
+    }
+
+    // getMyBookings devuelve lista vacía cuando no hay reservas
+    @Test
+    void getMyBookings_noBookings_returnsEmptyList() {
+        when(bookingRepository.findByClientId(1L)).thenReturn(List.of());
+
+        List<BookingResponseDTO> result = bookingService.getMyBookings(1L);
+
+        assertThat(result).isEmpty();
+    }
 }

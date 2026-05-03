@@ -10,7 +10,6 @@ import com.eap15.reservehub.mapper.UserMapper;
 import com.eap15.reservehub.repository.ProviderCodeRepository;
 import com.eap15.reservehub.repository.UserRepository;
 import com.eap15.reservehub.security.JwtProvider;
-import com.eap15.reservehub.security.UserDetailsImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,7 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -219,7 +218,7 @@ class UserServiceTest {
         loginRequest.setPassword("Password1!");
 
         when(authenticationManager.authenticate(any()))
-                .thenThrow(new DisabledException("account disabled"));
+                .thenThrow(new LockedException("account locked"));
 
         assertThatThrownBy(() -> userService.login(loginRequest))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -241,6 +240,22 @@ class UserServiceTest {
         assertThatThrownBy(() -> userService.login(loginRequest))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("inactiva");
+    }
+
+    @Test
+    void login_userNotFoundPostAuth_throwsIllegalArgument() {
+        LoginRequestDTO loginRequest = new LoginRequestDTO();
+        loginRequest.setEmail("ghost@example.com");
+        loginRequest.setPassword("Password1!");
+
+        Authentication auth = mock(Authentication.class);
+        when(authenticationManager.authenticate(any())).thenReturn(auth);
+        when(jwtProvider.generateToken(auth)).thenReturn("token");
+        when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.login(loginRequest))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("no encontrado");
     }
 
     // ── getAllUsers ──────────────────────────────────────────────────────────

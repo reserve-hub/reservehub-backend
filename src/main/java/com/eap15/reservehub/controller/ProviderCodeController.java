@@ -2,10 +2,14 @@ package com.eap15.reservehub.controller;
 
 import com.eap15.reservehub.dto.ProviderCodeResponseDTO;
 import com.eap15.reservehub.service.ProviderCodeService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -13,8 +17,11 @@ import java.util.List;
 @RequestMapping(value = "/api/provider-codes", produces = "application/json")
 public class ProviderCodeController {
 
-    @Autowired
-    private ProviderCodeService providerCodeService;
+    private final ProviderCodeService providerCodeService;
+
+    public ProviderCodeController(ProviderCodeService providerCodeService) {
+        this.providerCodeService = providerCodeService;
+    }
 
     // HU-09 Escenario 1: Generar código (solo ADMINISTRADOR)
     @PreAuthorize("hasRole('ADMINISTRADOR')")
