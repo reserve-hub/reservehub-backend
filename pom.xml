@@ -25,6 +25,11 @@
 		<maven.compiler.source>17</maven.compiler.source>
 		<maven.compiler.target>17</maven.compiler.target>
 
+		<sonar.organization>reserve-hub</sonar.organization>
+		<sonar.projectKey>reserve-hub_reservehub-backend</sonar.projectKey>
+		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
+		<sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+
 	</properties>
 
 	<dependencies>
