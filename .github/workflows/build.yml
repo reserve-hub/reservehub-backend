@@ -40,10 +40,10 @@ jobs:
         run: mvn -B verify --file pom.xml
 
       - name: SonarCloud Analysis
+        uses: SonarSource/sonarcloud-github-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: mvn -B sonar:sonar --file pom.xml
 
       - name: Upload Jacoco coverage report
         uses: actions/upload-artifact@v4
