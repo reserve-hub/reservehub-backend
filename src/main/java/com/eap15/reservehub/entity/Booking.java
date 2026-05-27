@@ -33,6 +33,14 @@ public class Booking {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    // HU-10: registra la fecha/hora exacta de cancelación
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
+
+    // HU-10: registra la fecha/hora del último reagendamiento
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
     @PrePersist
     protected void onCreate() {
         if (createdAt == null) {
@@ -41,6 +49,6 @@ public class Booking {
     }
 
     public enum BookingStatus {
-        CONFIRMED, CANCELLED
+        CONFIRMED, CANCELLED, RESCHEDULED
     }
 }

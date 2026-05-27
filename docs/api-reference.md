@@ -387,14 +387,158 @@ POST /api/bookings/
 
 ---
 
-### 3.2 Mis Reservas (Cliente)
+### 3.2 Mis Reservas — Historial con filtros *(Sprint 3 — HU-11)*
 **Requiere: `CLIENTE`**
 
 ```
 GET /api/bookings/mine
 ```
 
-**Respuesta 200:** Lista de `BookingResponseDTO` del cliente autenticado
+**Query params (todos opcionales):**
+| Param | Tipo | Ejemplo | Descripción |
+|-------|------|---------|-------------|
+| `status` | `CONFIRMED` \| `CANCELLED` \| `RESCHEDULED` | `CANCELLED` | Filtrar por estado |
+| `from` | ISO DateTime | `2026-01-01T00:00:00` | Inicio del rango de fechas |
+| `to` | ISO DateTime | `2026-12-31T23:59:59` | Fin del rango de fechas |
+
+**Respuesta 200:** Lista de `BookingResponseDTO` del cliente autenticado (vacía si no hay reservas)
+
+**Errores posibles:**
+| Código | Causa |
+|--------|-------|
+| 400 | `from` posterior a `to` (rango inválido) |
+
+---
+
+### 3.3 Cancelar Reserva *(Sprint 3 — HU-10)*
+**Requiere: `CLIENTE` (solo propietario de la reserva)**
+
+```
+PATCH /api/bookings/{id}/cancel
+```
+
+> Libera el cupo de la franja horaria. Registra `cancelledAt`.
+
+**Respuesta 200:** `BookingResponseDTO` con `status: "CANCELLED"` y `cancelledAt` poblado
+
+**Errores posibles:**
+| Código | Causa |
+|--------|-------|
+| 400 | La reserva ya está cancelada |
+| 403 | No es el propietario de la reserva |
+| 404 | Reserva no existe |
+
+---
+
+### 3.4 Reagendar Reserva *(Sprint 3 — HU-10)*
+**Requiere: `CLIENTE` (solo propietario de la reserva)**
+
+```
+PATCH /api/bookings/{id}/reschedule
+```
+
+**Body:**
+```json
+{
+  "newScheduleId": 5
+}
+```
+
+> Libera el cupo del horario anterior y descuenta uno del nuevo. Registra `updatedAt`.
+
+**Respuesta 200:** `BookingResponseDTO` con `status: "RESCHEDULED"`, nuevo `scheduleId` y `updatedAt` poblado
+
+**Errores posibles:**
+| Código | Causa |
+|--------|-------|
+| 400 | Reserva cancelada / nuevo horario sin cupos o inactivo |
+| 403 | No es el propietario de la reserva |
+| 404 | Reserva o nuevo horario no existe |
+
+---
+
+### 3.5 Reservas del Proveedor *(Sprint 3 — HU-11)*
+**Requiere: `PROVEEDOR`**
+
+```
+GET /api/bookings/provider/mine
+```
+
+**Query params (opcionales):**
+| Param | Tipo | Descripción |
+|-------|------|-------------|
+| `from` | ISO DateTime | Inicio del rango |
+| `to` | ISO DateTime | Fin del rango |
+
+**Respuesta 200:** Lista de `BookingResponseDTO` del proveedor autenticado
+
+---
+
+### 3.6 Reporte Operativo — Admin *(Sprint 3 — HU-12)*
+**Requiere: `ADMINISTRADOR`**
+
+```
+GET /api/bookings/report
+```
+
+**Query params (opcionales):** `from`, `to` (ISO DateTime)
+
+**Respuesta 200:**
+```json
+{
+  "total": 42,
+  "confirmed": 30,
+  "cancelled": 8,
+  "rescheduled": 4,
+  "dateFrom": "2026-01-01T00:00:00",
+  "dateTo": "2026-12-31T23:59:59"
+}
+```
+
+**Errores posibles:**
+| Código | Causa |
+|--------|-------|
+| 400 | Rango de fechas inválido |
+| 403 | Rol no autorizado |
+
+---
+
+### 3.7 Reporte Operativo — Proveedor *(Sprint 3 — HU-12)*
+**Requiere: `PROVEEDOR`**
+
+```
+GET /api/bookings/report/mine
+```
+
+**Query params (opcionales):** `from`, `to` (ISO DateTime)
+
+**Respuesta 200:**
+```json
+{
+  "total": 10,
+  "confirmed": 7,
+  "cancelled": 2,
+  "rescheduled": 1,
+  "dateFrom": null,
+  "dateTo": null,
+  "occupancy": [
+    {
+      "scheduleId": 1,
+      "startTime": "2026-06-10T09:00:00",
+      "endTime": "2026-06-10T10:00:00",
+      "totalSlots": 5,
+      "usedSlots": 3,
+      "availableSlots": 2,
+      "occupancyRate": 60.0
+    }
+  ]
+}
+```
+
+**Errores posibles:**
+| Código | Causa |
+|--------|-------|
+| 400 | Rango de fechas inválido |
 
 ---
 

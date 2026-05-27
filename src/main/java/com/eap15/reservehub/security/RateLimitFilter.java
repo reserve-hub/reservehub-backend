@@ -7,6 +7,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -22,11 +23,20 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
 
+    /** Permite deshabilitar el rate limit en entornos de prueba (test application.properties). */
+    @Value("${rate-limit.enabled:true}")
+    private boolean rateLimitEnabled;
+
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+
+        if (!rateLimitEnabled) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 

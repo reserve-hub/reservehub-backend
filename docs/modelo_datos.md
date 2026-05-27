@@ -45,18 +45,23 @@ Almacena las franjas de disponibilidad horaria registradas por los proveedores.
 
 **Índices:** `provider_id`, `start_time`, `active`.
 
-### 4. `bookings` *(Sprint 2 — HU-08)*
+### 4. `bookings` *(Sprint 2 — HU-08 / Sprint 3 — HU-10, HU-11, HU-12)*
 Registra las reservas realizadas por los clientes sobre franjas disponibles.
 
-| Columna       | Tipo de Dato       | Restricciones             | Descripción |
-| ------------- | ------------------ | --------------------------| ----------- |
-| `id`          | BIGINT             | PRIMARY KEY, IDENTITY     | Identificador único de la reserva. |
-| `client_id`   | BIGINT             | NOT NULL, FK → users(id)  | Cliente que realizó la reserva. |
-| `schedule_id` | BIGINT             | NOT NULL, FK → schedules(id) | Franja reservada. |
-| `status`      | booking_status     | NOT NULL, DEFAULT 'CONFIRMED' | Estado: `CONFIRMED` o `CANCELLED`. |
-| `created_at`  | TIMESTAMP          | NOT NULL, DEFAULT NOW()   | Fecha/hora de creación. |
+| Columna        | Tipo de Dato   | Restricciones                | Descripción |
+| -------------- | -------------- | -----------------------------| ----------- |
+| `id`           | BIGINT         | PRIMARY KEY, IDENTITY        | Identificador único de la reserva. |
+| `client_id`    | BIGINT         | NOT NULL, FK → users(id)     | Cliente que realizó la reserva. |
+| `schedule_id`  | BIGINT         | NOT NULL, FK → schedules(id) | Franja reservada. |
+| `status`       | booking_status | NOT NULL, DEFAULT 'CONFIRMED' | Estado: `CONFIRMED`, `CANCELLED` o `RESCHEDULED`. |
+| `created_at`   | TIMESTAMP      | NOT NULL, DEFAULT NOW()      | Fecha/hora de creación. |
+| `cancelled_at` | TIMESTAMP      | NULL                         | Fecha/hora de cancelación *(HU-10 Escenario 1)*. |
+| `updated_at`   | TIMESTAMP      | NULL                         | Fecha/hora del último reagendamiento *(HU-10 Escenario 4)*. |
 
-**Índices:** `client_id`, `schedule_id`.
+**Índices:** `client_id`, `schedule_id`, `status`, `(client_id, status)`, `created_at`.
+
+**Enum `booking_status`:** `CONFIRMED` | `CANCELLED` | `RESCHEDULED`  
+*(Sprint 3 — migración aplicada: `ALTER TYPE booking_status ADD VALUE 'RESCHEDULED'`)*
 
 ---
 

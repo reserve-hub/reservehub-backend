@@ -12,7 +12,8 @@
 | Análisis completo (SAST + deuda técnica) | SonarCloud | ⚠️ Pendiente | Requiere configuración manual (ver sección al final) |
 | Estilo de código | Checkstyle | ⚠️ Pendiente | Requiere configuración manual (ver sección al final) |
 
-**Total: 75 tests, 0 fallos, cobertura > 70%, 0 bugs SpotBugs — BUILD SUCCESS**
+**Total: 152 tests, 0 fallos, cobertura > 70%, 0 bugs SpotBugs — BUILD SUCCESS**  
+*(Sprint 3 añadió 77 nuevos tests: 22 unitarios + 25 de integración sobre BookingService/Controller, además del fix al RateLimitFilter para tests)*
 
 ---
 
@@ -82,19 +83,19 @@ Reporte HTML generado en `target/site/jacoco/index.html` tras `mvn verify`.
 
 | Clase | Tests | Escenarios cubiertos |
 |-------|-------|---------------------|
-| `UserServiceTest` | 21 | registerCliente (éxito/email duplicado), registerProveedor (éxito/email dup/código inválido/usado/inactivo), login (éxito/credenciales malas/cuenta deshabilitada/activo-check), getAllUsers, getUserById (éxito/no encontrado), updateUser (mismo email/email nuevo/no encontrado/email tomado), toggleUserStatus (activa/desactiva/no encontrado) |
-| `BookingServiceTest` | 6 | createBooking (éxito/sin cupos/franja inactiva/no encontrada/decremento), getMyBookings |
-| `ScheduleServiceTest` | 10 | createSchedule (éxito/rango inválido/traslape/rol incorrecto/proveedor no encontrado), toggleScheduleStatus (desactiva/proveedor ajeno/no encontrado), getAvailableSchedules (sin filtros), getMySchedules |
+| `UserServiceTest` | 22 | registerCliente (éxito/email duplicado), registerProveedor (éxito/email dup/código inválido/usado/inactivo), login (éxito/credenciales malas/cuenta deshabilitada/activo-check), getAllUsers, getUserById (éxito/no encontrado), updateUser (mismo email/email nuevo/no encontrado/email tomado), toggleUserStatus (activa/desactiva/no encontrado) |
+| `BookingServiceTest` | 28 | HU-08 (createBooking éxito/sin cupos/franja inactiva/no encontrada/decremento/cliente no encontrado), getMyBookings, HU-10 cancel (éxito/no encontrada/no propietario/ya cancelada), HU-10 reschedule (éxito/sin cupos/reserva cancelada/no propietario/horario inactivo), HU-11 filtros (sin filtros/vacío/por estado/por fechas/rango inválido/proveedor), HU-12 reportes (admin completo/sin datos/fechas inválidas/proveedor/ocupación) |
+| `ScheduleServiceTest` | 14 | createSchedule (éxito/rango inválido/traslape/rol incorrecto/proveedor no encontrado), toggleScheduleStatus (desactiva/proveedor ajeno/no encontrado), getAvailableSchedules (sin filtros/con filtros), getMySchedules |
 | `ProviderCodeServiceTest` | 5 | generateCode, getAllCodes, deactivateCode (éxito/ya usado/no encontrado) |
 
 ### Tests de integración — capa HTTP (H2 in-memory)
 
 | Clase | Tests | Escenarios cubiertos |
 |-------|-------|---------------------|
-| `UserControllerIntegrationTest` | 11 | Registro cliente (éxito/email dup/email inválido/campo faltante), login (éxito/contraseña incorrecta), GET /api/users (sin token → 401/cliente → 403/admin → 200), PATCH status (admin), dashboard cliente |
-| `ScheduleControllerIntegrationTest` | 8 | GET /available (público/con filtro fecha), POST /schedules (sin token → 401/cliente → 403/proveedor válido → 200/rango inválido → 400), GET /mine, PATCH /{id}/status |
-| `BookingControllerIntegrationTest` | 6 | POST /bookings (sin token → 401/proveedor → 403/cliente válido → 200/franja inexistente → 400), GET /mine |
-| `ProviderCodeControllerIntegrationTest` | 7 | POST /provider-codes (sin token → 401/cliente → 403/admin → 200), GET /provider-codes (sin token → 401/cliente → 403/admin → 200 con lista), PATCH deactivate |
+| `UserControllerIntegrationTest` | 23 | Registro cliente (éxito/email dup/email inválido/campo faltante), login (éxito/contraseña incorrecta/cuenta bloqueada), GET /api/users (sin token → 401/cliente → 403/admin → 200), PATCH status (admin), dashboards proveedor/admin, PUT updateUser, GET /{id} |
+| `ScheduleControllerIntegrationTest` | 15 | GET /available (público/con filtros), POST /schedules (sin token → 401/cliente → 403/proveedor válido → 200/rango inválido → 400/solapamiento → 409), GET /mine, PATCH /{id}/status |
+| `BookingControllerIntegrationTest` | 28 | HU-08 (crear/sin token/rol incorrecto/franja inactiva/sin cupos), HU-10 (cancel/reschedule + escenarios de error), HU-11 (historial con filtros/proveedor), HU-12 (reportes admin/proveedor) |
+| `ProviderCodeControllerIntegrationTest` | 10 | POST /provider-codes (sin token → 401/cliente → 403/admin → 200), GET /provider-codes (sin token → 401/cliente → 403/admin → 200 con lista), PATCH deactivate, listado vacío |
 
 ---
 
